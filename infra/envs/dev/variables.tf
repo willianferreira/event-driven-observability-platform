@@ -9,3 +9,9 @@ variable "project_name" {
     type        = string
     default     = "event-driven-observability-platform"
 }
+
+variable "alerts_email" {
+  description = "Email that will receive alerts from SNS"
+  type = string
+  default = "willianforbusiness@gmail.com"
+}
