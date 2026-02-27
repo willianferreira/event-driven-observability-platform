@@ -119,3 +119,29 @@ resource "aws_iam_role_policy_attachment" "lambda_attach_sqs" {
     role       = aws_iam_role.lambda_role.name
     policy_arn = aws_iam_policy.lambda_sqs_policy.arn
 }
+
+resource "aws_lambda_function" "processor" {
+    function_name = "${var.project_name}-processor"
+    role          = aws_iam_role.lambda_role.arn
+    handler       = "handler.handler"
+    runtime       = "nodejs20.x"
+
+    filename      = "../../../services/api/src/function.zip"
+    source_code_hash = filebase64sha256("../../../services/api/src/function.zip")
+
+    timeout = 10
+    memory_size = 256
+
+    tags = {
+        Project = var.project_name
+        Environment = "dev"
+        ManagedBy = "terraform"
+    }
+}
+
+resource "aws_lambda_event_source_mapping" "sqs_trigger" {
+    event_source_arn = aws_sqs_queue.events.arn
+    function_name    = aws_lambda_function.processor.arn
+    batch_size       = 5
+    enabled          = true
+}
