@@ -164,3 +164,25 @@ resource "aws_dynamodb_table" "idempotency" {
         ManagedBy = "terraform"
     }
 }
+
+resource "aws_iam_policy" "lambda_dynamodb_policy" {
+    name = "${var.project_name}-lambda-dynamodb-policy"
+
+    policy = jsonencode({
+        Version = "2012-10-17"
+        Statement = [
+            {
+                Action = [
+                    "dynamodb:PutItem"
+                ]
+                Effect   = "Allow"
+                Resource = aws_dynamodb_table.idempotency.arn
+            }
+        ]
+    })
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_attach_dynamodb" {
+    role       = aws_iam_role.lambda_role.name
+    policy_arn = aws_iam_policy.lambda_dynamodb_policy.arn
+}
