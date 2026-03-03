@@ -147,3 +147,20 @@ resource "aws_lambda_event_source_mapping" "sqs_trigger" {
 
     function_response_types = ["ReportBatchItemFailures"]
 }
+
+resource "aws_dynamodb_table" "idempotency" {
+    name         = "${var.project_name}-idempotency"
+    billing_mode = "PAY_PER_REQUEST"
+    hash_key     = "messageId"
+
+    attribute {
+        name = "messageId"
+        type = "S"
+    }
+
+    tags = {
+        Project = var.project_name
+        Environment = "dev"
+        ManagedBy = "terraform"
+    }
+}
