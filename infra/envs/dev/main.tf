@@ -196,3 +196,14 @@ resource "aws_iam_role_policy_attachment" "lambda_attach_dynamodb" {
     role       = aws_iam_role.lambda_role.name
     policy_arn = aws_iam_policy.lambda_dynamodb_policy.arn
 }
+
+resource "aws_apigatewayv2_api" "events_api" {
+    name          = "${var.project_name}-events-api"
+    protocol_type = "HTTP"
+
+    tags = {
+        Project = var.project_name
+        Environment = "dev"
+        ManagedBy = "terraform"
+    }
+}
