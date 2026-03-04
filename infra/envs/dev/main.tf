@@ -132,6 +132,12 @@ resource "aws_lambda_function" "processor" {
     timeout = 10
     memory_size = 256
 
+    environment {
+        variables = {
+            IDEMPOTENCY_TABLE_NAME   = aws_dynamodb_table.idempotency.name
+        }
+    }
+
     tags = {
         Project = var.project_name
         Environment = "dev"
@@ -151,10 +157,14 @@ resource "aws_lambda_event_source_mapping" "sqs_trigger" {
 resource "aws_dynamodb_table" "idempotency" {
     name         = "${var.project_name}-idempotency"
     billing_mode = "PAY_PER_REQUEST"
-    hash_key     = "messageId"
+    hash_key     = "eventId"
+    ttl {
+        attribute_name = "expiresAt"
+        enabled        = true
+    }
 
     attribute {
-        name = "messageId"
+        name = "eventId"
         type = "S"
     }
 
