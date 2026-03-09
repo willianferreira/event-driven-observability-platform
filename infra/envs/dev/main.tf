@@ -276,7 +276,11 @@ resource "aws_apigatewayv2_stage" "dev" {
     name        = "dev"
     auto_deploy = true
 
-    // Enable CloudWatch logging for API Gateway
+    default_route_settings {
+        throttling_rate_limit = 1
+        throttling_burst_limit = 2
+    }
+
     access_log_settings {
         destination_arn = aws_cloudwatch_log_group.api_gateway_logs.arn
         format          = jsonencode({
