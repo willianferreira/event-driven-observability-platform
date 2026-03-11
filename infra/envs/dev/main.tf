@@ -314,10 +314,32 @@ resource "aws_cloudwatch_log_group" "api_gateway_logs" {
 resource "aws_cloudwatch_log_metric_filter" "api_4xx" {
     name           = "${var.project_name}-api-4xx"
     log_group_name = aws_cloudwatch_log_group.api_gateway_logs.name
-    pattern        = "{ $.status >= 400 && $.status < 500 }"
+    pattern = "{ $.status = 4* }"
     metric_transformation {
         name      = "${var.project_name}-Api4xxCount"
         namespace = "${var.project_name}/api-gateway"
         value     = "1"
     }
 }
+
+resource "aws_cloudwatch_metric_alarm" "api_4xx_spike" {
+    alarm_name          = "${var.project_name}-api-4xx-spike"
+    alarm_description   = "Triggers when API Gateway 4xx responses spike"
+    namespace           = "${var.project_name}/api-gateway"
+    metric_name         = "${var.project_name}-Api4xxCount"
+    statistic           = "Sum"
+    period              = 60
+    evaluation_periods  = 1 
+    threshold           = 5
+    comparison_operator = "GreaterThanOrEqualToThreshold"
+
+    alarm_actions = [aws_sns_topic.alerts.arn]
+
+    tags = {
+        Project = var.project_name
+        Environment = "dev"
+        ManagedBy = "terraform"
+    }
+}
+
+
