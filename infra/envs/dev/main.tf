@@ -342,4 +342,75 @@ resource "aws_cloudwatch_metric_alarm" "api_4xx_spike" {
     }
 }
 
+resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
+    alarm_name          = "${var.project_name}-lambda-errors"
+    alarm_description   = "Triggers when Lambda function reports errors"
+    namespace           = "AWS/Lambda"
+    metric_name         = "Errors"
+    statistic           = "Sum"
+    period              = 60
+    evaluation_periods  = 1
+    threshold           = 1
+    comparison_operator = "GreaterThanOrEqualToThreshold"
 
+    dimensions = {
+        FunctionName = aws_lambda_function.processor.function_name
+    }
+
+    alarm_actions = [aws_sns_topic.alerts.arn]
+
+    tags = {
+        Project = var.project_name
+        Environment = "dev"
+        ManagedBy = "terraform"
+    }
+}
+
+
+resource "aws_cloudwatch_metric_alarm" "dlq_depth" {
+    alarm_name          = "${var.project_name}-dlq-depth"
+    alarm_description   = "Triggers when SQS DLQ has messages waiting"
+    namespace           = "AWS/SQS"
+    metric_name         = "ApproximateNumberOfMessagesVisible"
+    statistic           = "Maximum"
+    period              = 60
+    evaluation_periods  = 1
+    threshold           = 1
+    comparison_operator = "GreaterThanOrEqualToThreshold"
+
+    dimensions = {
+        QueueName = aws_sqs_queue.events-dlq.name
+    }
+
+    alarm_actions = [aws_sns_topic.alerts.arn]
+
+    tags = {
+        Project = var.project_name
+        Environment = "dev"
+        ManagedBy = "terraform"
+    }
+}
+
+resource "aws_cloudwatch_metric_alarm" "queue_lag" {
+    alarm_name          = "${var.project_name}-queue-lag"
+    alarm_description   = "Messages stuck in SQS queue for too long"
+    namespace           = "AWS/SQS"
+    metric_name         = "ApproximateAgeOfOldestMessage"
+    statistic           = "Maximum"
+    period              = 60
+    evaluation_periods  = 1
+    threshold           = 120
+    comparison_operator = "GreaterThanOrEqualToThreshold"
+
+    dimensions = {
+        QueueName = aws_sqs_queue.events.name
+    }
+
+    alarm_actions = [aws_sns_topic.alerts.arn]
+
+    tags = {
+        Project = var.project_name
+        Environment = "dev"
+        ManagedBy = "terraform"
+    }
+}
