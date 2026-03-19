@@ -42,6 +42,48 @@ resource "aws_sns_topic_subscription" "alerts_email" {
     endpoint  = var.alerts_email
 }
 
+resource "aws_lambda_function" "ingestion" {
+    function_name = "${var.project_name}-ingestion"
+    role          = aws_iam_role.lambda_role.arn
+    handler       = "handler.handler"
+    runtime       = "nodejs20.x"
+
+    filename      = "../../../services/ingestion/src/function.zip"
+    source_code_hash = filebase64sha256("../../../services/ingestion/src/function.zip")
+
+    timeout = 10
+    memory_size = 256
+
+    environment {
+        variables = {
+            SQS_QUEUE_URL = aws_sqs_queue.events.url
+        }
+    }
+
+    tags = {
+        Project = var.project_name
+        Environment = "dev"
+        ManagedBy = "terraform"
+    }
+}
+resource "aws_iam_role_policy" "lambda_sqs_send" {
+    name = "${var.project_name}-lambda-sqs-send"
+    role = aws_iam_role.lambda_role.id
+
+    policy = jsonencode({
+        Version = "2012-10-17"
+        Statement = [
+            {
+                Action = [
+                    "sqs:SendMessage"
+                ]
+                Effect   = "Allow"
+                Resource = aws_sqs_queue.events.arn
+            }
+        ]
+    })
+}
+
 resource "aws_sqs_queue" "events-dlq" {
     name = "${var.project_name}-events-dlq"
     message_retention_seconds =  1209600 # 14 days in seconds
@@ -126,8 +168,8 @@ resource "aws_lambda_function" "processor" {
     handler       = "handler.handler"
     runtime       = "nodejs20.x"
 
-    filename      = "../../../services/api/src/function.zip"
-    source_code_hash = filebase64sha256("../../../services/api/src/function.zip")
+    filename      = "../../../services/processor/src/function.zip"
+    source_code_hash = filebase64sha256("../../../services/processor/src/function.zip")
 
     timeout = 10
     memory_size = 256
@@ -208,67 +250,10 @@ resource "aws_apigatewayv2_api" "events_api" {
     }
 }
 
-resource "aws_iam_role" "apigateway_sqs_role" {
-    name = "${var.project_name}-apigateway-role"
-
-    assume_role_policy = jsonencode({
-        Version = "2012-10-17"
-        Statement = [
-            {
-                Action = "sts:AssumeRole"
-                Effect = "Allow"
-                Principal = {
-                    Service = "apigateway.amazonaws.com"
-                }
-            }
-        ]
-    })
-
-    tags = {
-        Project = var.project_name
-        Environment = "dev"
-        ManagedBy = "terraform"
-    }
-}
-
-resource "aws_iam_policy" "apigateway_sqs_policy" {
-    name = "${var.project_name}-apigateway-sqs-policy"
-
-    policy = jsonencode({
-        Version = "2012-10-17"
-        Statement = [
-            {
-                Action = [
-                    "sqs:SendMessage"
-                ]
-                Effect   = "Allow"
-                Resource = aws_sqs_queue.events.arn
-            }
-        ]
-    })
-}
-
-resource "aws_iam_role_policy_attachment" "apigateway_attach_sqs" {
-    role       = aws_iam_role.apigateway_sqs_role.name
-    policy_arn = aws_iam_policy.apigateway_sqs_policy.arn
-}
-
-resource "aws_apigatewayv2_integration" "sqs_integration" {
-    api_id           = aws_apigatewayv2_api.events_api.id
-    integration_type = "AWS_PROXY"
-    integration_subtype = "SQS-SendMessage"
-    credentials_arn = aws_iam_role.apigateway_sqs_role.arn
-    payload_format_version = "1.0"
-    request_parameters = {
-        QueueUrl = aws_sqs_queue.events.url
-        MessageBody = "$request.body"
-    }
-}
-
 resource "aws_apigatewayv2_route" "events_post" {
     api_id    = aws_apigatewayv2_api.events_api.id
     route_key = "POST /events"
-    target    = "integrations/${aws_apigatewayv2_integration.sqs_integration.id}"
+    target = "integrations/${aws_apigatewayv2_integration.lambda_ingestion.id}"
 }
 
 resource "aws_apigatewayv2_stage" "dev" {
@@ -298,6 +283,22 @@ resource "aws_apigatewayv2_stage" "dev" {
             integrationErrorMessage = "$context.integrationErrorMessage"
         })
     }
+}
+
+
+resource "aws_lambda_permission" "apigateway_invoke" {
+    statement_id  = "AllowExecutionFromAPIGatewayIngestion"
+    action        = "lambda:InvokeFunction"
+    function_name = aws_lambda_function.ingestion.function_name
+    principal     = "apigateway.amazonaws.com"
+    source_arn    = "${aws_apigatewayv2_api.events_api.execution_arn}/*/*"
+}
+
+resource "aws_apigatewayv2_integration" "lambda_ingestion" {
+    api_id           = aws_apigatewayv2_api.events_api.id
+    integration_type = "AWS_PROXY"
+
+    integration_uri = aws_lambda_function.ingestion.invoke_arn
 }
 
 resource "aws_cloudwatch_log_group" "api_gateway_logs" {
