@@ -1,37 +1,64 @@
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, PutCommand } = require("@aws-sdk/lib-dynamodb");
+const { emitMetric } = require("../../shared/metrics");
 
 const client = new DynamoDBClient({});
 const dynamoDb = DynamoDBDocumentClient.from(client);
 
 const TABLE_NAME = process.env.IDEMPOTENCY_TABLE_NAME;
 
+const REQUIRED_FIELDS = ["eventId", "eventName", "eventType", "payload"];
+
+function validateNormalizedEvent(body) {
+  const missing = [];
+
+  for (const field of REQUIRED_FIELDS) {
+    if (body[field] == null) missing.push(field);
+  }
+
+  if (body.payload != null && typeof body.payload !== "object") {
+    missing.push("payload (must be object)");
+  }
+
+  return missing;
+}
+
 exports.handler = async (event) => {
   const failures = [];
 
   for (const record of event.Records) {
     const messageId = record.messageId;
+    let correlationId = null;
 
     try {
       const body = JSON.parse(record.body);
+      correlationId = body._metadata?.correlationId ?? null;
 
-      if (!body.eventId) {
-        console.log(
+      const missingFields = validateNormalizedEvent(body);
+      if (missingFields.length > 0) {
+        console.warn(
           JSON.stringify({
             level: "WARN",
             messageId,
-            reason: "Missing required field: eventId",
+            correlationId,
+            reason: "SchemaViolation",
+            missingFields,
           }),
         );
+        emitMetric({
+          namespace: process.env.METRICS_NAMESPACE || "ObservabilityPlatform",
+          metricName: "EventRejected",
+          service: "processor",
+        });
         continue;
       }
+
+      const { eventId, eventType } = body;
 
       // Transient failure
       if (body.failTransient) {
         throw new Error("Transient processing error");
       }
-
-      const eventId = body.eventId;
 
       try {
         const expiresAt = Math.floor(Date.now() / 1000) + 28 * 60 * 60;
@@ -52,41 +79,52 @@ exports.handler = async (event) => {
             JSON.stringify({
               level: "INFO",
               eventId,
-              message: "Duplicated message ignored",
+              correlationId,
+              message: "Idempotency: Duplicated Message ignored",
             }),
           );
+          emitMetric({
+            namespace: process.env.METRICS_NAMESPACE || "ObservabilityPlatform",
+            metricName: "EventDuplicated",
+            service: "processor",
+          });
           continue;
         }
         throw err;
       }
 
-      // Permanent error
-      if (!body.type) {
-        console.log(
-          JSON.stringify({
-            level: "WARN",
-            eventId,
-            reason: "Missing required field: type",
-          }),
-        );
-        continue;
-      }
+      emitMetric({
+        namespace: process.env.METRICS_NAMESPACE || "ObservabilityPlatform",
+        metricName: "EventProcessed",
+        service: "processor",
+      });
 
       console.log(
         JSON.stringify({
           level: "INFO",
           eventId,
+          correlationId,
+          eventType,
+          body,
           message: "Processed successfully",
         }),
       );
     } catch (err) {
-      console.log(
+      console.error(
         JSON.stringify({
           level: "ERROR",
           messageId,
+          correlationId,
+          body,
           error: err.message,
         }),
       );
+
+      emitMetric({
+        namespace: process.env.METRICS_NAMESPACE || "ObservabilityPlatform",
+        metricName: "EventRetried",
+        service: "processor",
+      });
 
       failures.push({
         itemIdentifier: messageId,
