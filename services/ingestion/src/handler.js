@@ -1,5 +1,6 @@
 const { SQSClient, SendMessageCommand } = require("@aws-sdk/client-sqs");
 const { emitMetric } = require("../../shared/metrics");
+const { createLogger } = require("../../shared/logger");
 const { randomUUID } = require("crypto");
 
 const REQUIRED_FIELDS = ["eventId", "eventName", "eventType", "payload"];
@@ -36,20 +37,18 @@ exports.handler = async (event, context) => {
     event.headers?.["X-Correlation-ID"] ||
     randomUUID();
 
+  const log = createLogger({
+    service: "ingestion",
+    correlationId,
+    awsRequestId: context.awsRequestId,
+  });
+
   try {
     const body = JSON.parse(event.body);
 
     const missingFields = validate(body);
     if (missingFields.length > 0) {
-      console.warn(
-        JSON.stringify({
-          level: "WARN",
-          correlationId,
-          awsRequestId: context.awsRequestId,
-          reason: "SchemaViolation",
-          missingFields,
-        }),
-      );
+      log.warn({ reason: "SchemaViolation", missingFields });
       emitMetric({
         namespace: process.env.METRICS_NAMESPACE || "ObservabilityPlatform",
         metricName: "EventRejected",
@@ -88,16 +87,11 @@ exports.handler = async (event, context) => {
       }),
     );
 
-    console.log(
-      JSON.stringify({
-        level: "INFO",
-        correlationId,
-        awsRequestId: context.awsRequestId,
-        eventId: body.eventId,
-        eventType: body.eventType,
-        message: "Event ingested successfully",
-      }),
-    );
+    log.info({
+      eventId: body.eventId,
+      eventType: body.eventType,
+      message: "Event ingested successfully",
+    });
 
     emitMetric({
       namespace: process.env.METRICS_NAMESPACE || "ObservabilityPlatform",
@@ -115,14 +109,7 @@ exports.handler = async (event, context) => {
       }),
     };
   } catch (error) {
-    console.error(
-      JSON.stringify({
-        level: "ERROR",
-        correlationId,
-        awsRequestId: context.awsRequestId,
-        error: error.message,
-      }),
-    );
+    log.error({ error: error.message });
     emitMetric({
       namespace: process.env.METRICS_NAMESPACE || "ObservabilityPlatform",
       metricName: "EventFailed",
