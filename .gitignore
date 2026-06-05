@@ -2,7 +2,10 @@ node_modules/
 .terraform/
 *.tfstate
 *.tfstate*
+*.tfvars
+!*.tfvars.example
 .env
 .DS_Store
 dist/
 *.zip
+

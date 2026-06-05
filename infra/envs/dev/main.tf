@@ -85,7 +85,7 @@ resource "aws_iam_role_policy" "lambda_sqs_send" {
   })
 }
 
-resource "aws_sqs_queue" "events-dlq" {
+resource "aws_sqs_queue" "events_dlq" {
   name                      = "${var.project_name}-events-dlq"
   message_retention_seconds = 1209600 # 14 days in seconds
 
@@ -100,7 +100,7 @@ resource "aws_sqs_queue" "events" {
   name                      = "${var.project_name}-events"
   message_retention_seconds = 345600 # 4 days in seconds 
   redrive_policy = jsonencode({
-    deadLetterTargetArn = aws_sqs_queue.events-dlq.arn
+    deadLetterTargetArn = aws_sqs_queue.events_dlq.arn
     maxReceiveCount     = 5
   })
 
@@ -418,7 +418,7 @@ resource "aws_cloudwatch_metric_alarm" "dlq_depth" {
   comparison_operator = "GreaterThanOrEqualToThreshold"
 
   dimensions = {
-    QueueName = aws_sqs_queue.events-dlq.name
+    QueueName = aws_sqs_queue.events_dlq.name
   }
 
   alarm_actions = [aws_sns_topic.alerts.arn]
@@ -684,7 +684,7 @@ resource "aws_cloudwatch_dashboard" "main" {
         y      = 12
         properties = {
           metrics = [
-            ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", aws_sqs_queue.events-dlq.name, { stat = "Maximum", label = "DLQ Messages" }]
+            ["AWS/SQS", "ApproximateNumberOfMessagesVisible", "QueueName", aws_sqs_queue.events_dlq.name, { stat = "Maximum", label = "DLQ Messages" }]
           ]
           view   = "singleValue"
           region = var.region
