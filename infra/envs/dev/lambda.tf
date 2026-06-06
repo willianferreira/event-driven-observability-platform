@@ -1,6 +1,6 @@
 resource "aws_lambda_function" "ingestion" {
   function_name = "${var.project_name}-ingestion"
-  role          = aws_iam_role.lambda_role.arn
+  role          = aws_iam_role.lambda_ingestion.arn
   handler       = "handler.handler"
   runtime       = "nodejs20.x"
 
@@ -17,16 +17,12 @@ resource "aws_lambda_function" "ingestion" {
     }
   }
 
-  tags = {
-    Project     = var.project_name
-    Environment = "dev"
-    ManagedBy   = "terraform"
-  }
+  tags = local.common_tags
 }
 
 resource "aws_lambda_function" "processor" {
   function_name = "${var.project_name}-processor"
-  role          = aws_iam_role.lambda_role.arn
+  role          = aws_iam_role.lambda_processing.arn
   handler       = "handler.handler"
   runtime       = "nodejs20.x"
 
@@ -44,9 +40,5 @@ resource "aws_lambda_function" "processor" {
     }
   }
 
-  tags = {
-    Project     = var.project_name
-    Environment = "dev"
-    ManagedBy   = "terraform"
-  }
+  tags = local.common_tags
 }

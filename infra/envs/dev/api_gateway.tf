@@ -1,11 +1,7 @@
 resource "aws_apigatewayv2_api" "events_api" {
   name          = "${var.project_name}-events-api"
   protocol_type = "HTTP"
-  tags = {
-    Project     = var.project_name
-    Environment = "dev"
-    ManagedBy   = "terraform"
-  }
+  tags          = local.common_tags
 }
 
 resource "aws_apigatewayv2_route" "events_post" {

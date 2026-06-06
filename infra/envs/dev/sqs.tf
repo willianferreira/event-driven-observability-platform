@@ -2,11 +2,7 @@ resource "aws_sqs_queue" "events_dlq" {
   name                      = "${var.project_name}-events-dlq"
   message_retention_seconds = 1209600 # 14 days in seconds
 
-  tags = {
-    Project     = var.project_name
-    Environment = "dev"
-    ManagedBy   = "terraform"
-  }
+  tags = local.common_tags
 }
 
 resource "aws_sqs_queue" "events" {
@@ -17,11 +13,7 @@ resource "aws_sqs_queue" "events" {
     maxReceiveCount     = 5
   })
 
-  tags = {
-    Project     = var.project_name
-    Environment = "dev"
-    ManagedBy   = "terraform"
-  }
+  tags = local.common_tags
 }
 
 resource "aws_lambda_event_source_mapping" "sqs_trigger" {

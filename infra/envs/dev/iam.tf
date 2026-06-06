@@ -1,6 +1,30 @@
+resource "aws_iam_role" "lambda_ingestion" {
+  name = "${var.project_name}-lambda-ingestion"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = local.common_tags
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_basic_execution_ingestion" {
+  role       = aws_iam_role.lambda_ingestion.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
 resource "aws_iam_role_policy" "lambda_sqs_send" {
   name = "${var.project_name}-lambda-sqs-send"
-  role = aws_iam_role.lambda_role.id
+  role = aws_iam_role.lambda_ingestion.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -16,8 +40,8 @@ resource "aws_iam_role_policy" "lambda_sqs_send" {
   })
 }
 
-resource "aws_iam_role" "lambda_role" {
-  name = "${var.project_name}-lambda-role"
+resource "aws_iam_role" "lambda_processing" {
+  name = "${var.project_name}-lambda-processing"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -32,15 +56,11 @@ resource "aws_iam_role" "lambda_role" {
     ]
   })
 
-  tags = {
-    Project     = var.project_name
-    Environment = "dev"
-    ManagedBy   = "terraform"
-  }
+  tags = local.common_tags
 }
 
-resource "aws_iam_role_policy_attachment" "lambda_basic_execution" {
-  role       = aws_iam_role.lambda_role.name
+resource "aws_iam_role_policy_attachment" "lambda_basic_execution_processing" {
+  role       = aws_iam_role.lambda_processing.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
@@ -64,7 +84,7 @@ resource "aws_iam_policy" "lambda_sqs_policy" {
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_attach_sqs" {
-  role       = aws_iam_role.lambda_role.name
+  role       = aws_iam_role.lambda_processing.name
   policy_arn = aws_iam_policy.lambda_sqs_policy.arn
 }
 
@@ -90,6 +110,6 @@ resource "aws_iam_policy" "lambda_dynamodb_policy" {
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_attach_dynamodb" {
-  role       = aws_iam_role.lambda_role.name
+  role       = aws_iam_role.lambda_processing.name
   policy_arn = aws_iam_policy.lambda_dynamodb_policy.arn
 }

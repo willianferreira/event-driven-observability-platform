@@ -12,11 +12,7 @@ resource "aws_dynamodb_table" "idempotency" {
     type = "S"
   }
 
-  tags = {
-    Project     = var.project_name
-    Environment = "dev"
-    ManagedBy   = "terraform"
-  }
+  tags = local.common_tags
 }
 
 resource "aws_dynamodb_table" "orders" {
@@ -29,9 +25,5 @@ resource "aws_dynamodb_table" "orders" {
     type = "S"
   }
 
-  tags = {
-    Project     = var.project_name
-    Environment = "dev"
-    ManagedBy   = "terraform"
-  }
+  tags = local.common_tags
 }

@@ -1,11 +1,7 @@
 resource "aws_cognito_user_pool" "main" {
   name = "${var.project_name}-user-pool"
 
-  tags = {
-    Project     = var.project_name
-    Environment = "dev"
-    ManagedBy   = "terraform"
-  }
+  tags = local.common_tags
 }
 
 resource "aws_cognito_resource_server" "api_events" {

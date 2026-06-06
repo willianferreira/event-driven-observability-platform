@@ -2,22 +2,14 @@ resource "aws_cloudwatch_log_group" "core" {
   name              = "/${var.project_name}/core"
   retention_in_days = 14
 
-  tags = {
-    Project     = var.project_name
-    Environment = "dev"
-    ManagedBy   = "terraform"
-  }
+  tags = local.common_tags
 }
 
 resource "aws_cloudwatch_log_group" "api_gateway_logs" {
   name              = "/aws/apigateway/${var.project_name}-events-api"
   retention_in_days = 7
 
-  tags = {
-    Project     = var.project_name
-    Environment = "dev"
-    ManagedBy   = "terraform"
-  }
+  tags = local.common_tags
 }
 
 resource "aws_cloudwatch_log_metric_filter" "api_4xx" {
@@ -57,11 +49,7 @@ resource "aws_cloudwatch_metric_alarm" "api_4xx_spike" {
 
   alarm_actions = [aws_sns_topic.alerts.arn]
 
-  tags = {
-    Project     = var.project_name
-    Environment = "dev"
-    ManagedBy   = "terraform"
-  }
+  tags = local.common_tags
 }
 
 resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
@@ -82,11 +70,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
 
   alarm_actions = [aws_sns_topic.alerts.arn]
 
-  tags = {
-    Project     = var.project_name
-    Environment = "dev"
-    ManagedBy   = "terraform"
-  }
+  tags = local.common_tags
 }
 
 
@@ -108,11 +92,7 @@ resource "aws_cloudwatch_metric_alarm" "dlq_depth" {
 
   alarm_actions = [aws_sns_topic.alerts.arn]
 
-  tags = {
-    Project     = var.project_name
-    Environment = "dev"
-    ManagedBy   = "terraform"
-  }
+  tags = local.common_tags
 }
 
 resource "aws_cloudwatch_metric_alarm" "queue_lag" {
@@ -133,9 +113,5 @@ resource "aws_cloudwatch_metric_alarm" "queue_lag" {
 
   alarm_actions = [aws_sns_topic.alerts.arn]
 
-  tags = {
-    Project     = var.project_name
-    Environment = "dev"
-    ManagedBy   = "terraform"
-  }
+  tags = local.common_tags
 }
