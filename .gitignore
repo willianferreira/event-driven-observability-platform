@@ -1,5 +1,6 @@
 node_modules/
 .terraform/
+**/.terraform/*
 *.tfstate
 *.tfstate*
 *.tfvars
@@ -8,4 +9,10 @@ node_modules/
 .DS_Store
 dist/
 *.zip
-
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.DS_Store
+.vscode/*
+!.vscode/settings.json
