@@ -17,3 +17,5 @@ override.tf.json
 .vscode/*
 !.vscode/settings.json
 artifacts/
+backend.hcl
+**/backend.hcl
