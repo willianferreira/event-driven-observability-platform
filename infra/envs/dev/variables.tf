@@ -25,3 +25,9 @@ variable "ingestion_alias_function_version" {
   type        = string
   default     = null
 }
+
+variable "processor_alias_function_version" {
+  description = "Optional Lambda version for the processor alias. When null, the alias points to the latest published version."
+  type        = string
+  default     = null
+}

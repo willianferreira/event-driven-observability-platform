@@ -18,10 +18,12 @@ resource "aws_sqs_queue" "events" {
 
 resource "aws_lambda_event_source_mapping" "sqs_trigger" {
   event_source_arn = aws_sqs_queue.events.arn
-  function_name    = aws_lambda_function.processor.arn
+  function_name    = aws_lambda_alias.processor_live.arn
   batch_size       = 5
   enabled          = true
 
   function_response_types = ["ReportBatchItemFailures"]
+
+  tags = local.common_tags
 }
 

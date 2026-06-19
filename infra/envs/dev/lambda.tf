@@ -32,6 +32,7 @@ resource "aws_lambda_function" "processor" {
   function_name = "${var.project_name}-processor"
   role          = aws_iam_role.lambda_processing.arn
   handler       = "handler.handler"
+  publish       = true
   runtime       = "nodejs20.x"
 
   filename         = "../../../artifacts/processor/function.zip"
@@ -49,4 +50,11 @@ resource "aws_lambda_function" "processor" {
   }
 
   tags = local.common_tags
+}
+
+resource "aws_lambda_alias" "processor_live" {
+  name             = "live"
+  description      = "Stable alias for SQS processor traffic"
+  function_name    = aws_lambda_function.processor.function_name
+  function_version = coalesce(var.processor_alias_function_version, aws_lambda_function.processor.version)
 }
