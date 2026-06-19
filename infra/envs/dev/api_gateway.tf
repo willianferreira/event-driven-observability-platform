@@ -47,6 +47,7 @@ resource "aws_lambda_permission" "apigateway_invoke" {
   statement_id  = "AllowExecutionFromAPIGatewayIngestion"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.ingestion.function_name
+  qualifier     = aws_lambda_alias.ingestion_live.name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.events_api.execution_arn}/*/*"
 }
@@ -55,7 +56,7 @@ resource "aws_apigatewayv2_integration" "lambda_ingestion" {
   api_id           = aws_apigatewayv2_api.events_api.id
   integration_type = "AWS_PROXY"
 
-  integration_uri = aws_lambda_function.ingestion.invoke_arn
+  integration_uri = aws_lambda_alias.ingestion_live.invoke_arn
 }
 
 resource "aws_apigatewayv2_authorizer" "cognito_jwt" {

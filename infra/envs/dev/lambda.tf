@@ -2,6 +2,7 @@ resource "aws_lambda_function" "ingestion" {
   function_name = "${var.project_name}-ingestion"
   role          = aws_iam_role.lambda_ingestion.arn
   handler       = "handler.handler"
+  publish       = true
   runtime       = "nodejs20.x"
 
   filename         = "../../../artifacts/ingestion/function.zip"
@@ -18,6 +19,13 @@ resource "aws_lambda_function" "ingestion" {
   }
 
   tags = local.common_tags
+}
+
+resource "aws_lambda_alias" "ingestion_live" {
+  name             = "live"
+  description      = "Stable alias for API Gateway ingestion traffic"
+  function_name    = aws_lambda_function.ingestion.function_name
+  function_version = coalesce(var.ingestion_alias_function_version, aws_lambda_function.ingestion.version)
 }
 
 resource "aws_lambda_function" "processor" {
