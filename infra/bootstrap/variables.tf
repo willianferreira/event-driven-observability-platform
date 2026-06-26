@@ -25,3 +25,8 @@ variable "region" {
   type        = string
   default     = "us-east-2"
 }
+
+variable "github_repo" {
+  description = "GitHub repository slug (org/repo) for OIDC trust policy"
+  type        = string
+}
