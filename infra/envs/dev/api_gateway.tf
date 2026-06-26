@@ -13,6 +13,15 @@ resource "aws_apigatewayv2_route" "events_post" {
   authorization_type = "JWT"
 }
 
+resource "aws_apigatewayv2_route" "orders_get" {
+  api_id    = aws_apigatewayv2_api.events_api.id
+  route_key = "GET /orders/{eventId}"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_orders_query.id}"
+
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito_jwt.id
+  authorization_type = "JWT"
+}
+
 resource "aws_apigatewayv2_stage" "dev" {
   api_id      = aws_apigatewayv2_api.events_api.id
   name        = "dev"
@@ -52,11 +61,26 @@ resource "aws_lambda_permission" "apigateway_invoke" {
   source_arn    = "${aws_apigatewayv2_api.events_api.execution_arn}/*/*"
 }
 
+resource "aws_lambda_permission" "apigateway_invoke_orders_query" {
+  statement_id  = "AllowExecutionFromAPIGatewayOrdersQuery"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.orders_query.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.events_api.execution_arn}/*/*"
+}
+
 resource "aws_apigatewayv2_integration" "lambda_ingestion" {
   api_id           = aws_apigatewayv2_api.events_api.id
   integration_type = "AWS_PROXY"
 
   integration_uri = aws_lambda_alias.ingestion_live.invoke_arn
+}
+
+resource "aws_apigatewayv2_integration" "lambda_orders_query" {
+  api_id           = aws_apigatewayv2_api.events_api.id
+  integration_type = "AWS_PROXY"
+
+  integration_uri = aws_lambda_function.orders_query.invoke_arn
 }
 
 resource "aws_apigatewayv2_authorizer" "cognito_jwt" {

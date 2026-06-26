@@ -113,3 +113,45 @@ resource "aws_iam_role_policy_attachment" "lambda_attach_dynamodb" {
   role       = aws_iam_role.lambda_processing.name
   policy_arn = aws_iam_policy.lambda_dynamodb_policy.arn
 }
+
+resource "aws_iam_role" "lambda_orders_query" {
+  name = "${var.project_name}-lambda-orders-query"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = local.common_tags
+}
+
+resource "aws_iam_role_policy" "lambda_orders_query_dynamodb_read" {
+  name = "${var.project_name}-lambda-orders-query-dynamodb-read"
+  role = aws_iam_role.lambda_orders_query.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+          "dynamodb:GetItem"
+        ]
+        Effect   = "Allow"
+        Resource = aws_dynamodb_table.orders.arn
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_basic_execution_orders_query" {
+  role       = aws_iam_role.lambda_orders_query.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}

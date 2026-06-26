@@ -11,6 +11,7 @@ const ARTIFACTS_DIR = path.join(ROOT, "artifacts");
 const LAMBDAS = [
   { name: "ingestion", entry: "services/ingestion/src/handler.js" },
   { name: "processor", entry: "services/processor/src/handler.js" },
+  { name: "orders-query", entry: "services/orders-query/src/handler.js" },
 ];
 
 /**

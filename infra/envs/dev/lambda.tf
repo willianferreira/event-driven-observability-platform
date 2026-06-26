@@ -58,3 +58,24 @@ resource "aws_lambda_alias" "processor_live" {
   function_name    = aws_lambda_function.processor.function_name
   function_version = coalesce(var.processor_alias_function_version, aws_lambda_function.processor.version)
 }
+
+resource "aws_lambda_function" "orders_query" {
+  function_name = "${var.project_name}-orders-query"
+  role          = aws_iam_role.lambda_orders_query.arn
+  handler       = "handler.handler"
+  runtime       = "nodejs20.x"
+
+  filename         = "../../../artifacts/orders-query/function.zip"
+  source_code_hash = filebase64sha256("../../../artifacts/orders-query/function.zip")
+
+  timeout     = 10
+  memory_size = 256
+
+  environment {
+    variables = {
+      ORDERS_TABLE_NAME = aws_dynamodb_table.orders.name
+    }
+  }
+
+  tags = local.common_tags
+}
