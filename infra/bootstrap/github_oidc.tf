@@ -106,7 +106,8 @@ resource "aws_iam_role_policy" "github_apply_permissions" {
           "lambda:DeleteEventSourceMapping",
           "lambda:UpdateEventSourceMapping",
           "lambda:GetEventSourceMapping",
-          "lambda:ListEventSourceMappings"
+          "lambda:ListEventSourceMappings",
+          "lambda:ListTags"
         ]
         Resource = "*"
       },
@@ -121,6 +122,12 @@ resource "aws_iam_role_policy" "github_apply_permissions" {
         Effect   = "Allow"
         Action   = ["cognito-idp:*"]
         Resource = "arn:aws:cognito-idp:us-east-2:${data.aws_caller_identity.current.account_id}:userpool/*"
+      },
+      {
+        Sid      = "CognitoDomain"
+        Effect   = "Allow"
+        Action   = ["cognito-idp:DescribeUserPoolDomain"]
+        Resource = "*"
       },
       {
         Sid      = "SQS"
